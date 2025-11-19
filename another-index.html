@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Camera + Location Capture</title>
+
+    <style>
+        body {
+            font-family: Arial;
+            margin: 20px;
+        }
+
+        video, img {
+            width: 100%;
+            margin-top: 10px;
+            border-radius: 10px;
+            border: 2px solid #444;
+        }
+
+        button {
+            padding: 15px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 18px;
+            margin-top: 15px;
+            width: 100%;
+        }
+
+        button:hover {
+            background: #0056b3;
+        }
+
+        #output {
+            margin-top: 15px;
+        }
+    </style>
+</head>
+<body>
+
+    <h2>Take Photo + Get Exact Location</h2>
+
+    <button onclick="startCamera()">Start Camera</button>
+    <button onclick="capturePhoto()">Capture Photo</button>
+    <button onclick="getLocation()">Get My Location</button>
+
+    <video id="camera" autoplay playsinline></video>
+    <img id="photo" />
+
+    <h3>Location Details</h3>
+    <p><b>Latitude:</b> <span id="lat">-</span></p>
+    <p><b>Longitude:</b> <span id="lon">-</span></p>
+    <p><b>Address:</b> <span id="address">-</span></p>
+
+    <script>
+        let videoStream;
+
+        // Start Camera
+        async function startCamera() {
+            try {
+                videoStream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: "environment" }
+                });
+                document.getElementById("camera").srcObject = videoStream;
+            } catch (error) {
+                alert("Camera Error: " + error.message);
+            }
+        }
+
+        // Capture photo
+        function capturePhoto() {
+            if (!videoStream) {
+                alert("Start camera first!");
+                return;
+            }
+
+            const video = document.getElementById("camera");
+            const canvas = document.createElement("canvas");
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+
+            canvas.getContext("2d").drawImage(video, 0, 0);
+
+            const imgData = canvas.toDataURL("image/jpeg");
+            document.getElementById("photo").src = imgData;
+        }
+
+        // Get Location (Lat/Long)
+        function getLocation() {
+            if (!navigator.geolocation) {
+                alert("Geolocation not supported.");
+                return;
+            }
+
+            navigator.geolocation.getCurrentPosition(success, error, {
+                enableHighAccuracy: true,
+                timeout: 10000
+            });
+        }
+
+        // On Success
+        async function success(position) {
+            const lat = position.coords.latitude;
+            const lon = position.coords.longitude;
+
+            document.getElementById("lat").innerText = lat;
+            document.getElementById("lon").innerText = lon;
+
+            // Fetch full address from Nominatim API
+            const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`;
+
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+
+                document.getElementById("address").innerText =
+                    data.display_name || "Address not found";
+            } catch (e) {
+                document.getElementById("address").innerText = "Error fetching address";
+            }
+        }
+
+        // On Error
+        function error(err) {
+            alert("Location Error: " + err.message);
+        }
+    </script>
+
+</body>
+</html>
